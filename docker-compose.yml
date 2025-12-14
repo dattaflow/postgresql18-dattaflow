@@ -1,0 +1,43 @@
+services:
+  postgres-db:
+    build: .
+    container_name: postgres-db
+    restart: unless-stopped
+    networks:
+      - internal
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      TZ: America/Sao_Paulo
+      PGDATA: /var/lib/postgresql/18/docker
+      PGBACKREST_PG1_PATH: /var/lib/postgresql/18/docker
+      PGBACKREST_STANZA: main
+      PGBACKREST_REPO1_TYPE: posix
+      PGBACKREST_REPO1_PATH: /bkp
+      PGBACKREST_RETENTION_FULL: "2"
+      PGBACKREST_RETENTION_DIFF: "7"
+    secrets:
+      - postgres_password
+    volumes:
+      - pg_data:/var/lib/postgresql
+      - ./pgbackrest_repo:/bkp
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+
+networks:
+  internal:
+    external: true
+    name: ${INTERNAL_NET}
+
+volumes:
+  pg_data:
